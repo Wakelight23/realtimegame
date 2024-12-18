@@ -6,6 +6,7 @@ class Score {
   stageChange = true;
   currentStageId = 1000; // 초기 스테이지 ID (stage.json의 첫 번째 ID)
   userId = null; // 유저 ID 저장
+  isLastStage = false; // 마지막 스테이지 여부 플래그
 
   constructor(ctx, scaleRatio) {
     this.socket = io();
@@ -48,7 +49,27 @@ class Score {
     });
   }
 
-  // 일정 점수가 될 때 스테이지가 변경되는 로직직
+  async getStageData(stageId) {
+    return new Promise((resolve, reject) => {
+      this.socket.emit('request-game-assets', (response) => {
+        if (response.status === 'success') {
+          const allStages = response.data.stages?.data || [];
+          const currentStage = allStages.find((s) => s.id === stageId);
+          if (!currentStage) {
+            console.error(`Stage with ID ${stageId} not found`);
+            resolve({ allStages }); // 모든 스테이지 데이터를 반환
+          } else {
+            resolve({ ...currentStage, allStages }); // 현재 스테이지와 전체 스테이지 반환
+          }
+        } else {
+          console.error('Failed to fetch stage data:', response.message);
+          reject(null);
+        }
+      });
+    });
+  }
+
+  // 일정 점수가 될 때 스테이지가 변경되는 로직
   async update(deltaTime) {
     if (!this.userId) return; // userId가 없으면 업데이트 중단
 
@@ -56,19 +77,33 @@ class Score {
     this.score += deltaTime * 0.001;
     // 현재 스테이지의 목표 점수를 가져옴
     try {
-      const targetScore = await this.getTargetScore(this.currentStageId); // 목표 점수 가져오기
+      const stageData = await this.getStageData(this.currentStageId); // 현재 스테이지 데이터 가져오기
 
-      if (targetScore === null) {
-        console.error('Target score is null. Cannot proceed.');
+      if (!stageData) {
+        console.error('Stage data is null. Cannot proceed.');
         return;
       }
 
-      // 디버깅 모음
-      // 현재 스테이지, 목표 점수, 스테이지 true false 상태, 현재 점수 체크
+      const { score: targetScore, scorePerSecond } = stageData;
+
+      // 점수 증가 (스테이지별 scorePerSecond를 반영)
+      this.score += deltaTime * 0.001 * scorePerSecond;
+
       // console.log('Current Stage ID:', this.currentStageId);
       // console.log('Current Score:', this.score);
       // console.log('Target Score:', targetScore);
       // console.log('Stage Change Flag:', this.stageChange);
+
+      // 마지막 스테이지인지 확인
+      const allStages = stageData.allStages || []; // 전체 스테이지 목록 가져오기
+      const isLastStage = !allStages.some((stage) => stage.id === this.currentStageId + 1);
+      this.isLastStage = isLastStage;
+
+      // 마지막 Stage라면
+      if (isLastStage) {
+        console.log('This is the last stage. Continuing...');
+        return; // 다음 단계로 이동하지 않고 점수 증가만 유지
+      }
 
       // 목표 점수에 도달하고 stageChange 플래그가 true일 때 다음 스테이지로 이동
       if (this.score >= targetScore && this.stageChange) {
@@ -101,6 +136,7 @@ class Score {
   reset() {
     this.score = 0;
     this.currentStageId = 1000; // 초기화 시 첫 번째 스테이지로 돌아감
+    this.isLastStage = false; // 플래그 초기화
   }
 
   // 현재 코드는 localStorage에만 highscore가 저장중

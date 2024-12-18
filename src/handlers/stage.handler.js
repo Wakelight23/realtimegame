@@ -42,8 +42,11 @@ export const moveStageHandler = (userId, payload) => {
   // some이란? 조건문이 하나라도 맞으면 true, 하나라도 맞지 않으면 false를 출력
   const { stages } = getGameAssets();
   const targetStageForm = payload.targetStage;
+  // 다음 스테이지가 존재하지 않는 경우 처리
   if (!stages.data.some((stage) => stage.id === targetStageForm)) {
-    return { status: 'fail', message: 'Target stage not found' };
+    console.log('No further stages available. Continuing last stage.');
+    setStage(userId, currentStage, serverTime); // 현재 스테이지를 유지
+    return { status: 'success', message: 'Last stage reached. Continuing current stage.' };
   }
 
   // 모든 검증 절차를 완료했을 때 게임이 시작
