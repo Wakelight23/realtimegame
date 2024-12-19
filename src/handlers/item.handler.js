@@ -12,10 +12,19 @@ export const updateScoreHandler = (userId, payload) => {
       return { status: 'success', message: 'User initialized', newScore: clientScore };
     }
 
+    // 기존 유저의 점수 가져오기
+    const previousScore = getItem(userId);
+
+    // 특정 점수 간격(예: 100점 단위)마다 로그 출력
+    const logInterval = 100; // 로그를 출력할 간격
+    if (Math.floor(clientScore / logInterval) > Math.floor(previousScore / logInterval)) {
+      console.log(`Score updated for userId: ${userId}, New Score: ${clientScore}`);
+    }
+
     // 기존 유저의 점수 업데이트
     setItem(userId, clientScore);
-    // console.log('Updated user data:', getItem(userId));
 
+    // 반환값은 로깅하지 않음
     return { status: 'success', message: 'Score updated successfully', newScore: clientScore };
   } catch (error) {
     console.error('Error updating score:', error.message);

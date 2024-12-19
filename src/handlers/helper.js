@@ -43,7 +43,7 @@ export const handlerEvent = (io, socket, data, callback) => {
 
   callback(response); // 클라이언트의 콜백 호출
 
-  // // 모든 유저에게 보내야 한다면 broadcast 사용
+  // 모든 유저에게 보내야 한다면 broadcast 사용
   // if (response.broadcast) {
   //   io.emit('response', 'broadcast');
   //   return;

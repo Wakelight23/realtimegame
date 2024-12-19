@@ -31,4 +31,11 @@
   2스테이지에는 2번 아이템까지 나오는 것
 - 높은 스테이지의 아이템에서는 더 높은 점수 획득 가능
 
-### 도전 기능?
+### 도전 기능
+
+- broadcast로 플레이어 중 최고 기록 점수 알림 구현
+- 동시에 플레이하고 있을 경우 최고 점수 갱신되었을 시 console에 출력
+
+### 기술 스택
+
+<img src="https://img.shields.io/badge/javascript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black"><img src="https://img.shields.io/badge/node.js-339933?style=for-the-badge&logo=Node.js&logoColor=white"><img src="https://img.shields.io/badge/express-000000?style=for-the-badge&logo=express&logoColor=white"><img src="https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white"><img src="https://img.shields.io/badge/git-F05032?style=for-the-badge&logo=git&logoColor=white"><img src="https://img.shields.io/badge/socket.io-010101?style=for-the-badge&logo=socket.io&logoColor=white">

@@ -21,22 +21,28 @@
       "score": 30,
       "width": 25,
       "height": 25,
+      "image": "./images/items/pokeball_pink.png"
+    },
+    {
+      "id": 4,
+      "score": 40,
+      "width": 25,
+      "height": 25,
       "image": "./images/items/pokeball_purple.png"
     },
-    { "id": 4, "score": 40, "width": 25, "height": 25, "image": "./images/items/pokeball_red.png" },
     {
       "id": 5,
       "score": 50,
       "width": 25,
       "height": 25,
-      "image": "./images/items/pokeball_yellow.png"
+      "image": "./images/items/pokeball_red.png"
     },
     {
       "id": 6,
       "score": 100,
       "width": 25,
       "height": 25,
-      "image": "./images/items/pokeball_pink.png"
+      "image": "./images/items/pokeball_yellow.png"
     }
   ]
 }
