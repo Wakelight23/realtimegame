@@ -195,10 +195,38 @@ class Score {
   // 현재 코드는 localStorage에만 highscore가 저장중
   // -> 기록이 가능해야하며 다른 접속자가 볼 수 있어야 함함
   setHighScore() {
-    const highScore = Number(localStorage.getItem(this.HIGH_SCORE_KEY));
+    const highScore = Number(localStorage.getItem(this.HIGH_SCORE_KEY)) || 0;
+
     if (this.score > highScore) {
-      localStorage.setItem(this.HIGH_SCORE_KEY, Math.floor(this.score));
+      const payload = { score: Math.floor(this.score) };
+
+      sendEvent(23, payload, (response) => {
+        if (response.status === 'success') {
+          console.log(response.message);
+
+          // 로컬 스토리지에 개인 최고 점수 업데이트
+          localStorage.setItem(this.HIGH_SCORE_KEY, Math.floor(this.score));
+
+          // 글로벌 브로드캐스트 메시지 처리
+          if (response.broadcast) {
+            console.log(`New global high score by ${response.userId}: ${response.score}`);
+          }
+        } else {
+          console.error('Failed to submit high score:', response.message);
+        }
+      });
     }
+  }
+
+  getGlobalHighScore() {
+    sendEvent(24, {}, (response) => {
+      if (response.status === 'success') {
+        const { userId, score } = response.data;
+        console.log(`Global High Score - User: ${userId}, Score: ${score}`);
+      } else {
+        console.error('Failed to fetch global high score:', response.message);
+      }
+    });
   }
 
   updateScore(newScore) {

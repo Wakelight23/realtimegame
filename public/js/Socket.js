@@ -19,6 +19,11 @@ socket.on('connection', (data) => {
   userId = data.uuid;
 });
 
+// 서버로부터 브로드캐스트된 신기록 수신
+socket.on('broadcast-high-score', (data) => {
+  console.log(`New high score by ${data.userId}: ${data.score}`);
+});
+
 export const requestGameAssets = (callback) => {
   socket.emit('request-game-assets', (response) => {
     if (response && response.status === 'success') {

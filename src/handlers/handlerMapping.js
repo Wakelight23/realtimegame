@@ -4,6 +4,7 @@
 import { gameEnd, gameStart } from './game.handler.js';
 import { moveStageHandler } from './stage.handler.js';
 import { validateItemHandler, updateScoreHandler } from './item.handler.js';
+import { submitHighScoreHandler, getGlobalHighScoreHandler } from './score.handler.js';
 
 export const handlerMappings = {
   2: gameStart, // 게임이 시작할 대 핸들러
@@ -11,6 +12,8 @@ export const handlerMappings = {
   11: moveStageHandler, // 다음 스테이지로 가는 핸들러
   21: validateItemHandler,
   22: updateScoreHandler, // 점수 업데이트 핸들러
+  23: submitHighScoreHandler, // 개인 최고 기록 핸들러
+  24: getGlobalHighScoreHandler, // 전체 최고 기록 조회 핸들러
 };
 
 export default handlerMappings;

@@ -8,14 +8,18 @@
     },
     {
       "id": 1001,
-      "unlockedItems": [1, 2]
+      "unlockedItems": [1]
     },
     {
       "id": 1002,
-      "unlockedItems": [1, 2, 3]
+      "unlockedItems": [1, 2]
     },
     {
       "id": 1003,
+      "unlockedItems": [1, 2, 3]
+    },
+    {
+      "id": 1004,
       "unlockedItems": [1, 2, 3, 4]
     },
     {
