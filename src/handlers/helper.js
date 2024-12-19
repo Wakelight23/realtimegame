@@ -43,16 +43,6 @@ export const handlerEvent = (io, socket, data, callback) => {
 
   callback(response); // 클라이언트의 콜백 호출
 
-  // const handler = handlerMappings[data.handlerId];
-  // if (!handler) {
-  //   socket.emit('response', { status: 'fail', message: 'Handler not found' });
-  //   return;
-  // }
-
-  // const response = handler(data.userId, data.payload);
-
-  // console.log('Handler response:', response);
-
   // // 모든 유저에게 보내야 한다면 broadcast 사용
   // if (response.broadcast) {
   //   io.emit('response', 'broadcast');

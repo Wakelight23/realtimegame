@@ -1,10 +1,9 @@
-import { sendEvent } from './Socket.js';
+import { sendEvent, requestGameAssets } from './Socket.js';
 
 class Score {
   score = 0;
   HIGH_SCORE_KEY = 'highScore';
   stageChange = true;
-  currentStageId = 1000; // 초기 스테이지 ID (stage.json의 첫 번째 ID)
   userId = null; // 유저 ID 저장
   isLastStage = false; // 마지막 스테이지 여부 플래그
 
@@ -14,6 +13,9 @@ class Score {
     this.canvas = ctx.canvas;
     this.scaleRatio = scaleRatio;
     this.stageChange = true;
+    this.currentStageId = 1000; // 초기 스테이지 ID (stage.json의 첫 번째 ID)
+
+    this.isFetchingItem = {}; // 아이템이 중복으로 획득되는지 체크용 객체
 
     this.initUser();
   }
@@ -32,17 +34,17 @@ class Score {
   // 현재 비동기 처리
   async getTargetScore(stageId) {
     return new Promise((resolve, reject) => {
-      this.socket.emit('request-game-assets', (response) => {
-        if (response.status === 'success') {
-          const stage = response.data.stages?.data?.find((s) => s.id === stageId);
+      requestGameAssets((data) => {
+        if (data) {
+          const stage = data.stages?.data?.find((s) => s.id === stageId);
           if (!stage) {
             console.error(`Stage with ID ${stageId} not found`);
-            resolve(null); // 해당 스테이지가 없으면 null 반환
+            resolve(null);
           } else {
-            resolve(stage.score); // 스테이지의 목표 점수 반환
+            resolve(stage.score);
           }
         } else {
-          console.error('Failed to fetch target score:', response.message);
+          console.error('Failed to fetch target score.');
           reject(null);
         }
       });
@@ -51,86 +53,137 @@ class Score {
 
   async getStageData(stageId) {
     return new Promise((resolve, reject) => {
-      this.socket.emit('request-game-assets', (response) => {
-        if (response.status === 'success') {
-          const allStages = response.data.stages?.data || [];
+      requestGameAssets((data) => {
+        if (data) {
+          const allStages = data.stages?.data || [];
           const currentStage = allStages.find((s) => s.id === stageId);
           if (!currentStage) {
             console.error(`Stage with ID ${stageId} not found`);
-            resolve({ allStages }); // 모든 스테이지 데이터를 반환
+            resolve({ allStages });
           } else {
-            resolve({ ...currentStage, allStages }); // 현재 스테이지와 전체 스테이지 반환
+            resolve({ ...currentStage, allStages });
           }
         } else {
-          console.error('Failed to fetch stage data:', response.message);
+          console.error('Failed to fetch stage data.');
           reject(null);
         }
       });
     });
   }
 
+  async getItem(itemId) {
+    if (this.isFetchingItem[itemId]) {
+      console.warn(`중복 요청된 ID: ${itemId}`);
+      return; // 중복 요청 방지
+    }
+
+    this.isFetchingItem[itemId] = true;
+
+    return new Promise((resolve, reject) => {
+      requestGameAssets((data) => {
+        this.isFetchingItem[itemId] = false; // 플래그 해제
+
+        if (data) {
+          const itemData = data.items?.data?.find((item) => item.id === itemId);
+          if (!itemData) {
+            console.warn(`Item with ID ${itemId} not found.`);
+            resolve(0);
+          } else {
+            this.score += itemData.score; // 아이템 점수 추가
+
+            // 서버에 검증 요청
+            const payload = {
+              userId: this.userId,
+              currentStageId: this.currentStageId,
+              clientScore: this.score,
+              itemId,
+              timestamp: Date.now(),
+            };
+
+            sendEvent(21, payload, (response) => {
+              if (response.status === 'success') {
+                console.log('Item validated successfully:', response);
+                this.score = response.newScore; // 서버에서 반환된 최신 점수로 동기화
+                resolve(itemData.score);
+              } else {
+                console.error('Failed to validate item:', response.message);
+                reject(0);
+              }
+            });
+          }
+        } else {
+          console.error('Failed to fetch item data.');
+          reject(0);
+        }
+      });
+    });
+  }
+
+  getScore() {
+    return this.score;
+  }
+
   // 일정 점수가 될 때 스테이지가 변경되는 로직
   async update(deltaTime) {
     if (!this.userId) return; // userId가 없으면 업데이트 중단
 
-    // 점수 증가
-    this.score += deltaTime * 0.001;
-    // 현재 스테이지의 목표 점수를 가져옴
-    try {
-      const stageData = await this.getStageData(this.currentStageId); // 현재 스테이지 데이터 가져오기
-
-      if (!stageData) {
-        console.error('Stage data is null. Cannot proceed.');
-        return;
-      }
-
-      const { score: targetScore, scorePerSecond } = stageData;
-
-      // 점수 증가 (스테이지별 scorePerSecond를 반영)
-      this.score += deltaTime * 0.001 * scorePerSecond;
-
-      // console.log('Current Stage ID:', this.currentStageId);
-      // console.log('Current Score:', this.score);
-      // console.log('Target Score:', targetScore);
-      // console.log('Stage Change Flag:', this.stageChange);
-
-      // 마지막 스테이지인지 확인
-      const allStages = stageData.allStages || []; // 전체 스테이지 목록 가져오기
-      const isLastStage = !allStages.some((stage) => stage.id === this.currentStageId + 1);
-      this.isLastStage = isLastStage;
-
-      // 마지막 Stage라면
-      if (isLastStage) {
-        console.log('This is the last stage. Continuing...');
-        return; // 다음 단계로 이동하지 않고 점수 증가만 유지
-      }
-
-      // 목표 점수에 도달하고 stageChange 플래그가 true일 때 다음 스테이지로 이동
-      if (this.score >= targetScore && this.stageChange) {
-        console.log('Condition met: Moving to next stage');
-        this.stageChange = false; // 플래그 비활성화
-
-        sendEvent(
-          11,
-          { currentStage: this.currentStageId, targetStage: this.currentStageId + 1 },
-          (response) => {
-            if (response.status === 'success') {
-              console.log('Successfully moved to the next stage!');
-              this.currentStageId += 1; // 다음 스테이지로 이동
-            } else {
-              console.error('Failed to move to the next stage:', response.message);
-            }
-            this.stageChange = true; // 다시 요청 가능하도록 플래그 초기화
-          },
-        );
-      }
-    } catch (error) {
-      console.error('Error in update function:', error); // 에러 핸들링 추가
+    // 스테이지 데이터 가져오기
+    const stageData = await this.getStageData(this.currentStageId);
+    if (!stageData) {
+      console.error('Stage data is null. Cannot proceed.');
+      return;
     }
-  }
 
-  getItem(itemId) {
-    this.score += 1;
+    const { score: targetScore, scorePerSecond } = stageData;
+
+    // 시간당 점수 증가
+    this.score += deltaTime * 0.001 * scorePerSecond;
+
+    // 서버에 점수 검증 요청
+    const payload = {
+      userId: this.userId,
+      currentStageId: this.currentStageId,
+      clientScore: this.score,
+      timestamp: Date.now(),
+    };
+
+    sendEvent(22, payload, (response) => {
+      if (response.status === 'success') {
+        this.score = response.newScore; // 서버에서 반환된 최신 점수로 동기화
+      } else {
+        console.error('Failed to update score on server:', response.message);
+      }
+    });
+
+    // 마지막 스테이지 여부 확인
+    const allStages = stageData.allStages || [];
+    const isLastStage = !allStages.some((stage) => stage.id === this.currentStageId + 1);
+    this.isLastStage = isLastStage;
+
+    if (isLastStage) {
+      console.log('This is the last stage. Continuing...');
+      return; // 마지막 스테이지에서는 더 이상 진행하지 않음
+    }
+
+    // 목표 점수 도달 시 스테이지 변경
+    if (this.score >= targetScore && this.stageChange) {
+      console.log('Condition met: Moving to next stage');
+      this.stageChange = false; // 플래그 비활성화
+
+      sendEvent(
+        11,
+        { currentStage: this.currentStageId, targetStage: this.currentStageId + 1 },
+        (response) => {
+          if (response.status === 'success') {
+            console.log('Successfully moved to the next stage!');
+            this.currentStageId += 1; // 다음 스테이지로 이동
+          } else {
+            console.error('Failed to move to the next stage:', response.message);
+          }
+          this.stageChange = true; // 다시 요청 가능하도록 플래그 초기화
+        },
+      );
+    }
   }
 
   reset() {
@@ -148,8 +201,17 @@ class Score {
     }
   }
 
-  getScore() {
-    return this.score;
+  updateScore(newScore) {
+    console.log('Updating score:', newScore);
+    this.score = newScore;
+  }
+
+  getCurrentStageId() {
+    return this.currentStageId;
+  }
+
+  setCurrentStageId(stageId) {
+    this.currentStageId = stageId; // 현재 스테이지 ID 업데이트
   }
 
   draw() {

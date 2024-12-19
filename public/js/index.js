@@ -103,9 +103,12 @@ function createSprites() {
     };
   });
 
-  itemController = new ItemController(ctx, itemImages, scaleRatio, GROUND_SPEED);
-
   score = new Score(ctx, scaleRatio);
+
+  itemController = new ItemController(ctx, scaleRatio, GROUND_SPEED, score);
+
+  // 초기 스테이지 ID 설정
+  score.setCurrentStageId(1000);
 }
 
 function getScaleRatio() {
@@ -124,6 +127,7 @@ function setScreen() {
   scaleRatio = getScaleRatio();
   canvas.width = GAME_WIDTH * scaleRatio;
   canvas.height = GAME_HEIGHT * scaleRatio;
+
   createSprites();
 }
 
@@ -164,6 +168,7 @@ function reset() {
   ground.reset();
   cactiController.reset();
   score.reset();
+  itemController.reset();
   gameSpeed = GAME_SPEED_START;
   sendEvent(2, { timestamp: Date.now() });
 }
@@ -184,60 +189,54 @@ function clearScreen() {
 }
 
 function gameLoop(currentTime) {
-  if (previousTime === null) {
+  if (!previousTime) {
     previousTime = currentTime;
     requestAnimationFrame(gameLoop);
     return;
   }
 
-  // 모든 환경에서 같은 게임 속도를 유지하기 위해 구하는 값
-  // 프레임 렌더링 속도
   const deltaTime = currentTime - previousTime;
   previousTime = currentTime;
 
   clearScreen();
 
-  // 게임 오버 상태가 아니며 게임 시작을 기다리는 상태가 아닐 때때
   if (!gameover && !waitingToStart) {
-    // update
-    // 땅이 움직임
+    if (!score.currentStageId || !itemController.itemUnlockData) {
+      console.warn('Game data is not ready yet.');
+      requestAnimationFrame(gameLoop);
+      return;
+    }
+
     ground.update(gameSpeed, deltaTime);
-    // 선인장
     cactiController.update(gameSpeed, deltaTime);
     itemController.update(gameSpeed, deltaTime);
-    // 달리기
     player.update(gameSpeed, deltaTime);
+
     updateGameSpeed(deltaTime);
 
     score.update(deltaTime);
+
+    if (cactiController.collideWith(player)) {
+      gameover = true;
+      score.setHighScore();
+      setupGameReset();
+    }
+
+    const collidedItem = itemController.collideWith(player, score);
+    if (collidedItem && collidedItem.id) {
+      score.getItem(collidedItem.id);
+    }
   }
 
-  if (!gameover && cactiController.collideWith(player)) {
-    gameover = true;
-    score.setHighScore();
-    setupGameReset();
-  }
-  const collideWithItem = itemController.collideWith(player);
-  if (collideWithItem && collideWithItem.itemId) {
-    score.getItem(collideWithItem.itemId);
-  }
-
-  // draw
   player.draw();
   cactiController.draw();
   ground.draw();
   score.draw();
   itemController.draw();
 
-  if (gameover) {
-    showGameOver();
-  }
+  if (gameover) showGameOver();
+  if (waitingToStart) showStartGameText();
 
-  if (waitingToStart) {
-    showStartGameText();
-  }
-
-  // 재귀 호출 (무한반복)
   requestAnimationFrame(gameLoop);
 }
 

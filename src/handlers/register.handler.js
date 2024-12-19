@@ -29,11 +29,15 @@ const registerHandler = (io) => {
     // 클라이언트가 game assets 요청 시 처리
     socket.on('request-game-assets', (callback) => {
       try {
-        const assets = getGameAssets(); // gameAssets 가져오기
-        callback({ status: 'success', data: assets });
+        const assets = getGameAssets(); // assets 폴더에서 모든 자산 로드
+        if (typeof callback === 'function') {
+          callback({ status: 'success', data: assets });
+        }
       } catch (error) {
         console.error('Failed to retrieve game assets:', error.message);
-        callback({ status: 'fail', message: 'Failed to retrieve game assets' });
+        if (typeof callback === 'function') {
+          callback({ status: 'fail', message: 'Failed to retrieve game assets' });
+        }
       }
     });
 
