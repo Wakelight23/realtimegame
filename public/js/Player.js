@@ -57,6 +57,16 @@ class Player {
     window.addEventListener('keyup', this.keyup);
   }
 
+  // 충돌 박스를 반환하는 메서드 추가
+  getBoundingBox() {
+    return {
+      x: this.x,
+      y: this.y,
+      width: this.width,
+      height: this.height,
+    };
+  }
+
   keydown = (event) => {
     // 스페이스 바
     if (event.code === 'Space') {
@@ -75,17 +85,14 @@ class Player {
   keyup = (event) => {
     // 스페이스 바
     if (event.code === 'Space') {
-      console.log('press space');
       this.jumpPressed = false;
     }
     // 왼쪽 방향키
     if (event.code === 'ArrowLeft') {
-      console.log('press left');
       this.leftArrowPressed = false;
     }
     // 오른쪽 방향키
     if (event.code === 'ArrowRight') {
-      console.log('press right');
       this.rightArrowPressed = false;
     }
   };
@@ -148,14 +155,36 @@ class Player {
   }
 
   move(deltaTime) {
+    // 오른쪽 방향키가 눌렸을 때
     if (this.rightArrowPressed) {
       this.x += deltaTime * this.MOVE_SPEED * this.scaleRatio;
+
+      // 화면 오른쪽 경계를 넘어가지 않도록 제한
+      if (this.x + this.width > this.canvas.width) {
+        this.x = this.canvas.width - this.width;
+      }
     }
 
+    // 왼쪽 방향키가 눌렸을 때
     if (this.leftArrowPressed) {
       this.x -= deltaTime * this.MOVE_SPEED * this.scaleRatio;
+
+      // 화면 왼쪽 경계를 넘어가지 않도록 제한
+      if (this.x < 0) {
+        this.x = 0;
+      }
     }
   }
+
+  // move(deltaTime) {
+  //   if (this.rightArrowPressed) {
+  //     this.x += deltaTime * this.MOVE_SPEED * this.scaleRatio;
+  //   }
+
+  //   if (this.leftArrowPressed) {
+  //     this.x -= deltaTime * this.MOVE_SPEED * this.scaleRatio;
+  //   }
+  // }
 
   draw() {
     this.ctx.drawImage(this.image, this.x, this.y, this.width, this.height);

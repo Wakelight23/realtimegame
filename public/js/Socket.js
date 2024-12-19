@@ -19,6 +19,29 @@ socket.on('connection', (data) => {
   userId = data.uuid;
 });
 
+export const requestGameAssets = (callback) => {
+  socket.emit('request-game-assets', (response) => {
+    if (response && response.status === 'success') {
+      callback(response.data); // 성공적으로 데이터를 반환
+    } else {
+      console.error('Failed to fetch game assets:', response?.message || 'Unknown error');
+      callback(null); // 실패 시 null 전달
+    }
+  });
+};
+
+export const validateItem = (payload, callback) => {
+  socket.emit('validate-item', payload, (response) => {
+    if (response.status === 'success') {
+      console.log('Item validated successfully:', response);
+      callback(response);
+    } else {
+      console.error('Failed to validate item:', response.message);
+      callback(null);
+    }
+  });
+};
+
 const sendEvent = (handlerId, payload, callback) => {
   socket.emit(
     'event',
@@ -29,19 +52,9 @@ const sendEvent = (handlerId, payload, callback) => {
       payload,
     },
     (response) => {
-      console.log('Received response from server:', response); // 디버깅 로그 추가
       if (callback) callback(response); // 클라이언트 콜백 호출
     },
   );
 };
-
-// const sendEvent = (handlerId, payload, callback) => {
-//   socket.emit('event', {
-//     userId,
-//     clientVersion: CLIENT_VERSION,
-//     handlerId,
-//     payload,
-//   });
-// };
 
 export { socket, sendEvent };
